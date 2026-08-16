@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>발표 순서 뽑기</title>
+<style>
+  :root{
+    --bg1:#1e1b4b;
+    --bg2:#4c1d95;
+    --card:#ffffff;
+    --card-border:#e5e7eb;
+    --text:#1f2937;
+    --muted:#6b7280;
+    --accent:#7c3aed;
+    --accent2:#ec4899;
+    --accent-grad: linear-gradient(135deg,#7c3aed,#ec4899);
+    --pill-bg:#f3f4f6;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;}
+  body{
+    font-family:"Malgun Gothic","Apple SD Gothic Neo","Noto Sans KR","Segoe UI",sans-serif;
+    background: radial-gradient(circle at 20% 20%, var(--bg2), var(--bg1) 60%);
+    min-height:100vh;
+    color:var(--text);
+    display:flex;
+    justify-content:center;
+    padding:32px 16px 80px;
+  }
+  .wrap{ width:100%; max-width:640px; }
+  header{ text-align:center; margin-bottom:24px; color:#fff; }
+  header h1{ font-size:26px; margin:0 0 6px; letter-spacing:-0.5px; }
+  header p{ margin:0; color:#d8d4ff; font-size:14px; }
+  .card{
+    background:var(--card);
+    border-radius:20px;
+    padding:24px;
+    box-shadow:0 20px 50px rgba(0,0,0,0.35);
+    margin-bottom:20px;
+  }
+  .card h2{ font-size:15px; margin:0 0 12px; color:var(--text); }
+  textarea{
+    width:100%;
+    min-height:160px;
+    resize:vertical;
+    border:1px solid var(--card-border);
+    border-radius:12px;
+    padding:12px 14px;
+    font-size:14px;
+    line-height:1.6;
+    font-family:inherit;
+    color:var(--text);
+    background:#fafafa;
+  }
+  textarea:focus{
+    outline:2px solid var(--accent);
+    outline-offset:1px;
+    background:#fff;
+  }
+  .hint{ font-size:12px; color:var(--muted); margin-top:8px; }
+  button{
+    font-family:inherit;
+    font-size:16px;
+    font-weight:700;
+    border:none;
+    border-radius:12px;
+    padding:14px 20px;
+    cursor:pointer;
+    width:100%;
+    margin-top:14px;
+    background:var(--accent-grad);
+    color:#fff;
+    box-shadow:0 6px 16px rgba(124,58,237,0.35);
+    transition:transform .12s ease;
+  }
+  button:active{ transform:scale(0.98); }
+  .order-list{
+    list-style:none;
+    margin:0;
+    padding:0;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+  .order-list li{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    background:var(--pill-bg);
+    border-radius:12px;
+    padding:10px 14px;
+    font-size:15px;
+    animation: row-in .25s ease;
+  }
+  @keyframes row-in{
+    from{ opacity:0; transform: translateY(-4px); }
+    to{ opacity:1; transform: translateY(0); }
+  }
+  .order-list .num{
+    width:26px;
+    height:26px;
+    flex:0 0 26px;
+    border-radius:50%;
+    background:var(--accent-grad);
+    color:#fff;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:12px;
+    font-weight:700;
+  }
+  .order-list .name{ font-weight:600; flex:1; }
+  .empty-msg{ font-size:13px; color:var(--muted); text-align:center; padding:8px 0; }
+  footer{ text-align:center; color:#c9c4f5; font-size:12px; margin-top:8px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>🎲 발표 순서 뽑기</h1>
+    <p>명단을 입력하고 버튼을 누르면 순서가 랜덤으로 정해집니다</p>
+  </header>
+
+  <div class="card">
+    <h2>📋 학생 명단</h2>
+    <textarea id="nameInput" placeholder="한 줄에 한 명씩 입력하세요&#10;예)&#10;김민준&#10;이서연&#10;박도윤"></textarea>
+    <div class="hint">빈 줄은 자동으로 무시됩니다.</div>
+    <button id="drawBtn">🎯 순서 뽑기</button>
+  </div>
+
+  <div class="card" id="resultCard" style="display:none;">
+    <h2>✅ 발표 순서</h2>
+    <ol class="order-list" id="orderList"></ol>
+  </div>
+
+  <footer>외부 라이브러리 없이 순수 HTML/CSS/JS로 작동합니다</footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var nameInput = document.getElementById("nameInput");
+  var drawBtn = document.getElementById("drawBtn");
+  var resultCard = document.getElementById("resultCard");
+  var orderList = document.getElementById("orderList");
+
+  function parseNames(text){
+    return text.split("\n")
+      .map(function(s){ return s.trim(); })
+      .filter(function(s){ return s.length > 0; });
+  }
+
+  function shuffle(arr){
+    var a = arr.slice();
+    for(var i = a.length - 1; i > 0; i--){
+      var j = Math.floor(Math.random() * (i + 1));
+      var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+    }
+    return a;
+  }
+
+  function renderOrder(names){
+    orderList.innerHTML = "";
+
+    if(names.length === 0){
+      resultCard.style.display = "";
+      var msg = document.createElement("div");
+      msg.className = "empty-msg";
+      msg.textContent = "이름을 한 줄에 한 명씩 입력해주세요.";
+      orderList.appendChild(msg);
+      return;
+    }
+
+    resultCard.style.display = "";
+    names.forEach(function(name, idx){
+      var li = document.createElement("li");
+      var num = document.createElement("span");
+      num.className = "num";
+      num.textContent = (idx + 1);
+      var nm = document.createElement("span");
+      nm.className = "name";
+      nm.textContent = name;
+      li.appendChild(num);
+      li.appendChild(nm);
+      orderList.appendChild(li);
+    });
+  }
+
+  function drawOrder(){
+    var names = parseNames(nameInput.value);
+    var order = shuffle(names);
+    renderOrder(order);
+  }
+
+  drawBtn.addEventListener("click", drawOrder);
+})();
+</script>
+</body>
+</html>
